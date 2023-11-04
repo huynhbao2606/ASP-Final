@@ -1,0 +1,9 @@
+﻿
+@if (TempData["categorySuccess"] != null)
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            Swal.fire('Saved!', '', '@TempData["categorySuccess"]')
+        });
+    </script>
+}

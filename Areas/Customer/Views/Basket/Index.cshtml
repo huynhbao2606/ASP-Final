@@ -1,0 +1,100 @@
+﻿@model List<BasketItem>
+
+<div class="container p-3">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="text-primary">Shopping Cart</h2>
+        </div>
+    </div>
+</div>
+
+<form asp-action="UpdateCart">
+    <table class="table table-dark">
+        <thead>
+            <tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Price</th>
+                <th>Country</th>
+            </tr>
+        </thead>
+
+        <tbody id="tbbody">
+            @if (Model != null && Model.Count > 0)
+            {
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <input asp-for="@item.Vaccine.Id" type="hidden" />
+                        <td>
+                            <img src="" style="width: 100px; height: 80px; object-fit: cover" />
+                        </td>
+                        <td>@item.Vaccine.Name</td>
+                        <td>@item.Vaccine.Type</td>
+                        <td>@item.Vaccine.Price</td>
+                        <td>@item.Vaccine.Country</td>
+                        <td>
+                            <input asp-for="@item.Count" class="form-control" type="number" />
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    <div>
+        <input type="button" id="btnAjaxUpdateBasket" value="Update" class="btn btn-secondary" />
+    </div>
+</form>
+
+
+
+@section Scripts{
+    <script>
+        $(document).ready(function () {
+            loadShoppingCartListAsJson();
+
+            function loadShoppingCartListAsJson() {
+                $.ajax('/customer/basket/getall', {
+                    type: "GET",
+                    dataType: "json",
+                    success: function (data, status, xhr) {
+                        console.log(data);
+                    },
+                    error(xhr, status, error) {
+                        console.log(error);
+                    }
+                });
+            }
+
+
+            $("#btnAjaxUpdateBasket").click(function () {
+                var basketItemList = [];
+
+                $("#tbbody > tr").each(function (index, item) {
+                    var basketItem = {};
+                    basketItem.Id = parseInt($(item).find("input[id$='Vaccine_Id']").val());
+                    basketItem.Count = parseInt($(item).find("input[id$='Count']").val());
+                    basketItemList.push(basketItem);
+                });
+                console.log(JSON.stringify(basketItemList));
+
+                $.ajax('/customer/basket/updatecart', {
+                    type: "POST",
+                    contentType: 'application/json',
+                    headers: {
+                        RequestVerificationToken: $('input:hidden[name="__RequestVerificationToken"]').val()
+                    },
+                    data: JSON.stringify(basketItemList),
+                    success: function (data, status, xhr) {
+                        window.location.href = data.redirectToUrl;
+                    },
+                    error(xhr, status, error) {
+                        console.log(error);
+                    }
+                })
+            });
+        });
+    </script>
+}
