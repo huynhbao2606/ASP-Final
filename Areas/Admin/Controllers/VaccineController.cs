@@ -7,37 +7,53 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ASP_Final.Data;
 using ASP_Final.Models;
+using ASP_Final.Dao.IRepository;
+using X.PagedList;
+using ASP_MVC.ViewModels;
+using Microsoft.AspNetCore.Hosting;
 
 namespace ASP_MVC.Areas.Admin.Controllers
 {
     [Area("Admin")]
     public class VaccineController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public VaccineController(ApplicationDbContext context)
+        public VaccineController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET: Admin/Vaccine
-        public async Task<IActionResult> Index()
+        public IActionResult Index(int? page)
         {
-            var applicationDbContext = _context.Vaccine.Include(v => v.Type);
-            return View(await applicationDbContext.ToListAsync());
+            if (page == null) page = 1;
+
+            int pageSize = 7;
+
+
+            int pageNumber = (page ?? 1);
+
+            IEnumerable<Vaccine> vaccineList = _unitOfWork.Vaccine.GetEntities(
+                filter: null,
+                orderBy: null,
+                includeProperties: "Type"
+            );
+
+
+            return View(vaccineList.ToPagedList(pageNumber, pageSize));
         }
 
         // GET: Admin/Vaccine/Details/5
-        public async Task<IActionResult> Details(int? id)
+        public IActionResult Details(int? id)
         {
-            if (id == null || _context.Vaccine == null)
+            if (id == null || _unitOfWork.Vaccine.GetEntityById == null)
             {
                 return NotFound();
             }
 
-            var vaccine = await _context.Vaccine
-                .Include(v => v.Type)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var vaccine = _unitOfWork.Vaccine.GetEntityById(id);
+
             if (vaccine == null)
             {
                 return NotFound();
@@ -46,11 +62,37 @@ namespace ASP_MVC.Areas.Admin.Controllers
             return View(vaccine);
         }
 
+
         // GET: Admin/Vaccine/Create
-        public IActionResult Create()
+        public IActionResult Upsert(int? id)
         {
-            ViewData["TypeId"] = new SelectList(_context.Type, "Id", "Id");
-            return View();
+
+            VaccineDTO vaccineDTO = new VaccineDTO();
+
+            vaccineDTO.TypeList = _unitOfWork.Type.GetAll().Select(
+                i => new SelectListItem
+                {
+                    Text = i.Name,
+                    Value = i.Id.ToString()
+                });
+
+            Vaccine vaccine;
+            if (id == null || id == 0)
+            {
+                vaccine = new Vaccine();
+            }
+            else
+            {
+                vaccine = _unitOfWork.Vaccine.GetEntityById((int)id);
+
+                if (vaccine == null)
+                {
+                    return NotFound();
+                }
+            }
+
+            vaccineDTO.Vaccine = vaccine;
+            return View(vaccineDTO);
         }
 
         // POST: Admin/Vaccine/Create
@@ -58,70 +100,59 @@ namespace ASP_MVC.Areas.Admin.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Country,ExpirationData,Price,TypeId,CreatedAt")] Vaccine vaccine)
+        public IActionResult Upsert(
+         [Bind("Vaccine")] VaccineDTO vaccineDto)
         {
+
+            bool isCreate = vaccineDto.Vaccine.Id == 0;
+
+            /// validate
+            bool checkVaccineNameExist = _unitOfWork.Vaccine
+                .GetEntities(
+                    filter: isCreate
+                        ? i => i.Name == vaccineDto.Vaccine.Name
+                        : i => i.Name == vaccineDto.Vaccine.Name && i.Id != vaccineDto.Vaccine.Id,
+                    orderBy: null,
+                    includeProperties: null)
+                .Any();
+
+            if (checkVaccineNameExist)
+            {
+                ModelState.AddModelError("Name", "The vaccine name already exist");
+                TempData["vaccnieNameError"] = "The vaccine name already exist";
+            }
+
+            vaccineDto.TypeList = _unitOfWork.Type.GetAll().Select(
+                    i => new SelectListItem
+                    {
+                        Text = i.Name,
+                        Value = i.Id.ToString()
+                    });
+
+
+            /// save data
             if (ModelState.IsValid)
             {
-                _context.Add(vaccine);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["TypeId"] = new SelectList(_context.Type, "Id", "Id", vaccine.TypeId);
-            return View(vaccine);
-        }
 
-        // GET: Admin/Vaccine/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null || _context.Vaccine == null)
-            {
-                return NotFound();
+
+                if (isCreate)
+                {
+                    _unitOfWork.Vaccine.Add(vaccineDto.Vaccine);
+                }
+                else
+                {
+                    _unitOfWork.Vaccine.Update(vaccineDto.Vaccine);
+                }
+                _unitOfWork.Save();
+                return RedirectToAction("Index");
             }
 
-            var vaccine = await _context.Vaccine.FindAsync(id);
-            if (vaccine == null)
-            {
-                return NotFound();
-            }
-            ViewData["TypeId"] = new SelectList(_context.Type, "Id", "Id", vaccine.TypeId);
-            return View(vaccine);
+            return View(vaccineDto);
         }
 
         // POST: Admin/Vaccine/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Country,ExpirationData,Price,TypeId,CreatedAt")] Vaccine vaccine)
-        {
-            if (id != vaccine.Id)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(vaccine);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!VaccineExists(vaccine.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["TypeId"] = new SelectList(_context.Type, "Id", "Id", vaccine.TypeId);
-            return View(vaccine);
-        }
 
         // GET: Admin/Vaccine/Delete/5
         public async Task<IActionResult> Delete(int? id)
@@ -161,9 +192,5 @@ namespace ASP_MVC.Areas.Admin.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private bool VaccineExists(int id)
-        {
-            return (_context.Vaccine?.Any(e => e.Id == id)).GetValueOrDefault();
-        }
     }
 }

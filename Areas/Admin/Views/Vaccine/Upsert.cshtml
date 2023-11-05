@@ -1,0 +1,64 @@
+﻿@model VaccineDTO
+
+@{
+    ViewData["Title"] = "Create";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<form method="post" asp-action="Upsert" enctype="multipart/form-data">
+    <input asp-for="Vaccine.Id" type="hidden" />
+
+    <div class="mt-4">
+        <div class="row pb-2">
+            <h2>@(Model.Vaccine.Id != 0 ? "Edit" : "Create")</h2>
+            <hr />
+        </div>
+
+        <div asp-validation-summary="All"></div>
+
+        <div class="form-floating mb-3">
+            <label asp-for="Name" class="control-label"></label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+        <div class="form-floating mb-3">
+            <label asp-for="Country" class="control-label"></label>
+            <input asp-for="Country" class="form-control" />
+            <span asp-validation-for="Country" class="text-danger"></span>
+        </div>
+        <div class="form-floating mb-3">
+            <label asp-for="ExpirationData" class="control-label"></label>
+            <input asp-for="ExpirationData" class="form-control" />
+            <span asp-validation-for="ExpirationData" class="text-danger"></span>
+        </div>
+        <div class="form-floating mb-3">
+            <label asp-for="Price" class="control-label"></label>
+            <input asp-for="Price" class="form-control" />
+            <span asp-validation-for="Price" class="text-danger"></span>
+        </div>
+
+        <div class="form-floating mb-3">
+            <select asp-for="Vaccnie.TypeId" asp-items="@Model.TypeList" class="form-select"
+                    aria-label="Select Type">
+                <option disabled selected>--Select Type--</option>
+            </select>
+            <label asp-for="Vaccine.TypeId">Type</label>
+            <span asp-validation-for="Vaccine.TypeId" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:150px;">@(Model.Vaccine.Id != 0 ? "Update" : "Create")</button>
+
+        <a asp-controller="Vaccine" asp-action="Index" class="btn btn-secondary" style="width: 150px;">
+            Back to List
+        </a>
+    </div>
+</form>
+
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    @*<partial name="_ValidationScriptsPartial" />*@
+}
