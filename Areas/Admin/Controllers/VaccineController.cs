@@ -155,16 +155,15 @@ namespace ASP_MVC.Areas.Admin.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
 
         // GET: Admin/Vaccine/Delete/5
-        public async Task<IActionResult> Delete(int? id)
+        public IActionResult Delete(int? id)
         {
-            if (id == null || _context.Vaccine == null)
+            if (id == null || _unitOfWork.Vaccine.GetEntityById == null)
             {
                 return NotFound();
             }
 
-            var vaccine = await _context.Vaccine
-                .Include(v => v.Type)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var vaccine = _unitOfWork.Vaccine.GetEntityById(id);
+
             if (vaccine == null)
             {
                 return NotFound();
@@ -176,19 +175,19 @@ namespace ASP_MVC.Areas.Admin.Controllers
         // POST: Admin/Vaccine/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public IActionResult DeleteConfirmed(int id)
         {
-            if (_context.Vaccine == null)
+            if (_unitOfWork.Vaccine.GetEntityById == null)
             {
-                return Problem("Entity set 'ApplicationDbContext.Vaccine'  is null.");
+                return Problem("Entity set 'ApplicationDbContext.Vaccines'  is null.");
             }
-            var vaccine = await _context.Vaccine.FindAsync(id);
+            var vaccine = _unitOfWork.Vaccine.GetEntityById(id);
+
             if (vaccine != null)
             {
-                _context.Vaccine.Remove(vaccine);
+                _unitOfWork.Vaccine.Delete(vaccine);
             }
-
-            await _context.SaveChangesAsync();
+            _unitOfWork.Save();
             return RedirectToAction(nameof(Index));
         }
 

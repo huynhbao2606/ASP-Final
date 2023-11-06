@@ -1,13 +1,13 @@
 ﻿@model VaccineDTO
-
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Upsert";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+
+
 <form method="post" asp-action="Upsert" enctype="multipart/form-data">
     <input asp-for="Vaccine.Id" type="hidden" />
-
     <div class="mt-4">
         <div class="row pb-2">
             <h2>@(Model.Vaccine.Id != 0 ? "Edit" : "Create")</h2>
